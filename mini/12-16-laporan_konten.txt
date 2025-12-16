@@ -1,11 +1,11 @@
 LAPORAN KONTEN: artikel & img (12-16)
 =================================
-Total File: 50
+Total File: 53
 HTML=0, webp=0, PNG=34
 
 Ringkasan per ekstensi:
      34 png
-      5 txt
+      6 txt
       4 sh
       2 js
       1 svg
@@ -13,5 +13,7 @@ Ringkasan per ekstensi:
       1 json
       1 img/jurukunci
       1 ico
+      1 artikel/muscab-serikat-pekerja-angkasa-pura-balikpapan-andi-asri-terpilih-sebagai-ketua-periode-2023-2028
+      1 artikel/bandara-sams-sepinggan-salurkan-1500-paket-sembako-dan-bantuan-tjsl
 
 URL File HTML:
