@@ -13,19 +13,19 @@ const ARTIKEL_DIR = path.join(ROOT_DIR, "artikel");
 const IMG_DIR = path.join(ROOT_DIR, "img");
 
 const INPUT_SLUG_FILE = path.join(ARTIKEL_DIR, "portal.txt");
-const BASE_DOMAIN = 'https://portalbalikpapan.com'; 
+const BASE_DOMAIN = 'https://portalbalikpapan.com';
 
 const EXT = "webp";
-const TARGET_WIDTH = 1200; 
+const TARGET_WIDTH = 1200;
 const DEFAULT_VIEWPORT_HEIGHT = 1080;
-const HEIGHT_TO_CROP_FROM_BOTTOM = 1124; 
+const HEIGHT_TO_CROP_FROM_BOTTOM = 1124;
 
 // Konfigurasi pemblokiran resource
 const BLOCKED_RESOURCE_TYPES = [
-    'media', 'font', 'image', 'xhr', 'fetch', 'other'
+    'media', 'xhr', 'fetch', 'other'
 ];
 const BLOCKED_KEYWORDS = [
-    'ad.', 'advert', 'googlead', 'doubleclick', 
+    'ad.', 'advert', 'googlead', 'doubleclick',
     'analytics', 'track', 'tagmanager', 'facebook.com/tr', 'googlesyndication'
 ];
 
@@ -37,7 +37,7 @@ function readSlugsFromInputFile() {
         console.error(`[FATAL] File input tidak ditemukan: ${INPUT_SLUG_FILE}`);
         return [];
     }
-    
+
     const content = fs.readFileSync(INPUT_SLUG_FILE, 'utf8');
     return content.split('\n')
                   .map(line => line.trim())
@@ -79,7 +79,7 @@ async function main() {
 
     const browser = await puppeteer.launch({
       headless: "new",
-      defaultViewport: { width: TARGET_WIDTH, height: DEFAULT_VIEWPORT_HEIGHT }, 
+      defaultViewport: { width: TARGET_WIDTH, height: DEFAULT_VIEWPORT_HEIGHT },
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -89,14 +89,14 @@ async function main() {
     });
 
     const page = await browser.newPage();
-    
+
     // --- KONFIGURASI BLOKIR RESOURCE ---
     await page.setRequestInterception(true);
 
     page.on('request', (request) => {
         const url = request.url().toLowerCase();
         const resourceType = request.resourceType();
-        
+
         let shouldBlock = false;
 
         if (BLOCKED_RESOURCE_TYPES.includes(resourceType)) {
@@ -118,16 +118,16 @@ async function main() {
 
     for (const slug of slugs) {
         let url;
-        let slugForFileName = slug; 
+        let slugForFileName = slug;
 
         if (slug.startsWith('http')) {
-            url = slug; 
+            url = slug;
             slugForFileName = slug.replace(BASE_DOMAIN, '').replace('https://', '').replace('http://', '');
         } else {
-            url = `${BASE_DOMAIN}${slug}`; 
+            url = `${BASE_DOMAIN}${slug}`;
         }
-        
-        const cleanSlug = slugForFileName.replace(/^\/|\/$/g, ''); 
+
+        const cleanSlug = slugForFileName.replace(/^\/|\/$/g, '');
         const fileName = cleanSlug.replace(/\//g, '-');
         const outputFileName = `${fileName}.${EXT}`; // Nama file lengkap
 
@@ -139,13 +139,13 @@ async function main() {
 
         // Path lengkap untuk output
         const output = path.join(IMG_DIR, outputFileName);
-        
+
       console.log(`[🔍] Rendering ${url}`);
 
       try {
         const response = await page.goto(url, {
           waitUntil: ["load", "networkidle2"],
-          timeout: 60000, 
+          timeout: 60000,
         });
 
         if (!response || response.status() !== 200) {
@@ -154,7 +154,7 @@ async function main() {
         }
 
         // --- LOGIKA PENGUKURAN DAN PEMOTONGAN KETINGGIAN ---
-        
+
         const totalHeight = await page.evaluate(() => document.documentElement.scrollHeight);
         const targetHeight = Math.max(0, totalHeight - HEIGHT_TO_CROP_FROM_BOTTOM);
 
@@ -164,7 +164,7 @@ async function main() {
         }
 
         await page.setViewport({ width: TARGET_WIDTH, height: targetHeight });
-        
+
         await page.screenshot({
           path: output,
           type: EXT,
@@ -173,11 +173,11 @@ async function main() {
                x: 0,
                y: 0,
                width: TARGET_WIDTH,
-               height: targetHeight 
+               height: targetHeight
            }
         });
-        
-        await page.setViewport({ width: TARGET_WIDTH, height: DEFAULT_VIEWPORT_HEIGHT }); 
+
+        await page.setViewport({ width: TARGET_WIDTH, height: DEFAULT_VIEWPORT_HEIGHT });
 
         console.log(`[📸] Screenshot dipotong (Tinggi ${targetHeight}px) disimpan: ${outputFileName}`);
         // --- END LOGIKA PENGUKURAN ---
@@ -186,7 +186,7 @@ async function main() {
         console.error(`[⚠️] Gagal screenshot ${url}: ${err.message}`);
       }
 
-      await new Promise(r => setTimeout(r, 1000)); 
+      await new Promise(r => setTimeout(r, 1000));
     }
 
     await browser.close();
@@ -194,7 +194,7 @@ async function main() {
 
   } catch (err) {
     console.error(`[FATAL] ${err.message}`);
-  } 
+  }
 }
 
 main();
