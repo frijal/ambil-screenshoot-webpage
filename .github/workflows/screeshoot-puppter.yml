@@ -49,7 +49,7 @@ jobs:
       # 4. Jalankan Script Screenshot
       - name: 📸 Run Screenshot Generator
         # Asumsikan script Anda berada di root directory atau dipanggil dengan benar
-        run: node server-screenshot.js
+        run: node ext/screenshot-puppeteer.js
 
       # 5. Siapkan Output
       # File gambar yang dihasilkan perlu ditambahkan ke repositori
