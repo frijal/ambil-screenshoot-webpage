@@ -1,4 +1,7 @@
-// server-screenshot.js (REFINED & GH-ACTIONS SAFE)
+// =========================================================
+// SCRIPT: server-screenshot.js (ADVANCED)
+// FITUR: Full Page (Height Auto), Blokir Iklan/Tracker, GH-ACTIONS SAFE
+// =========================================================
 
 import fs from "fs";
 import path from "path";
@@ -13,8 +16,26 @@ const EXT = "webp";
 const PORT = 3000;
 const BASE_URL = `http://localhost:${PORT}/artikel/`;
 
+// Lebar tetap 1200px
 const TARGET_WIDTH = 1200;
-const TARGET_HEIGHT = 630;
+// TARGET_HEIGHT dinonaktifkan karena kita menggunakan fullPage: true (tinggi otomatis)
+// const TARGET_HEIGHT = 630;
+
+// Konfigurasi pemblokiran resource
+const BLOCKED_RESOURCE_TYPES = [
+  'media',       // Video, audio
+'font',        // Font eksternal
+'image',       // Gambar, tetapi akan diizinkan sebagian di logika
+'xhr',         // Panggilan AJAX/API
+'fetch',       // Panggilan Fetch API
+'other'        // Catch-all
+];
+
+// Kata kunci iklan/tracker yang dicari di URL
+const BLOCKED_KEYWORDS = [
+  'ad.', 'advert', 'googlead', 'doubleclick',
+'analytics', 'track', 'tagmanager', 'facebook.com/tr', 'googlesyndication'
+];
 
 function startServer() {
   return new Promise((resolve, reject) => {
@@ -55,16 +76,48 @@ async function main() {
     // Launch browser sekali saja
     const browser = await puppeteer.launch({
       headless: "new",
-      defaultViewport: { width: TARGET_WIDTH, height: TARGET_HEIGHT },
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-      ],
+      // HANYA set lebar. Tinggi akan otomatis karena opsi fullPage: true.
+      defaultViewport: { width: TARGET_WIDTH },
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
+        ],
     });
 
     const page = await browser.newPage();
+
+    // --- START: KONFIGURASI BLOKIR RESOURCE ---
+    await page.setRequestInterception(true);
+
+    page.on('request', (request) => {
+      const url = request.url().toLowerCase();
+      const resourceType = request.resourceType();
+
+      let shouldBlock = false;
+
+      // A. Blokir berdasarkan Tipe Resource umum
+      if (BLOCKED_RESOURCE_TYPES.includes(resourceType)) {
+        // Kita harus mengizinkan 'document', 'stylesheet', dan 'script' agar halaman terrender benar
+        if (resourceType !== 'document' && resourceType !== 'stylesheet' && resourceType !== 'script') {
+          shouldBlock = true;
+        }
+      }
+
+      // B. Blokir berdasarkan Kata Kunci (Targeting Ads/Trackers)
+      if (!shouldBlock && BLOCKED_KEYWORDS.some(keyword => url.includes(keyword))) {
+        shouldBlock = true;
+      }
+
+      // C. Eksekusi
+      if (shouldBlock) {
+        request.abort();
+      } else {
+        request.continue();
+      }
+    });
+    // --- END: KONFIGURASI BLOKIR RESOURCE ---
 
     for (const file of files) {
       const base = path.basename(file, ".html");
@@ -93,9 +146,10 @@ async function main() {
           path: output,
           type: EXT,
           quality: EXT === "webp" ? 90 : 90,
+          fullPage: true, // AKTIF: Tinggi penuh, lebar 1200px
         });
 
-        console.log(`[📸] Screenshot disimpan: ${output}`);
+        console.log(`[📸] Screenshot full page disimpan: ${output}`);
       } catch (err) {
         console.error(`[⚠️] Gagal screenshot ${url}: ${err.message}`);
       }
