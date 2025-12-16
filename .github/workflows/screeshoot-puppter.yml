@@ -1,25 +1,19 @@
 name: 📸 Generate Screenshots (External Domain)
 
 # 📢 Pemicu Workflow
-# Jalankan setiap hari pukul 02:00 UTC (sekitar 10 pagi WITA) dan secara manual.
 on:
   workflow_dispatch:
   schedule:
-    # Pelajari Cron Job: (menit jam hari-bulan bulan hari-minggu)
-    # 0 2 * * * = Jam 2 pagi UTC (atau jam 10 pagi WITA) setiap hari
     - cron: '0 2 * * *' 
   
-# Izinkan satu eksekusi tunggal (single concurrency)
 concurrency: 
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   generate:
-    # Gunakan runner Ubuntu terbaru (ini adalah pilihan terbaik untuk Puppeteer)
     runs-on: ubuntu-latest
 
-    # Variabel Lingkungan (Opsional, jika Anda ingin menyetel BASE_URL dari secrets/env)
     env:
       NODE_VERSION: 20.x
 
@@ -34,32 +28,25 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      # 2. Instal Ketergantungan
-      # Catatan: Karena menggunakan Puppeteer, kita perlu menginstal Chromium dependencies.
+      # 2. Instal Ketergantungan NPM (Termasuk Puppeteer)
       - name: 📦 Install NPM dependencies
         run: npm install
 
-      # 3. Instal Ketergantungan Puppeteer (Chromium)
-      # Ini penting agar Puppeteer dapat berjalan di runner GitHub Actions.
-      - name: 🌐 Install system dependencies for Puppeteer
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser
+      # 3. PASTIKAN INSTALASI CHROMIUM PUPPETEER (Solusi Cepat)
+      # Menggantikan apt-get yang lambat. Perintah ini memaksa Puppeteer mengunduh 
+      # versi Chromium yang kompatibel jika belum ada.
+      - name: 🌐 Ensure Puppeteer Chromium is installed
+        run: npx puppeteer install
 
       # 4. Jalankan Script Screenshot
       - name: 📸 Run Screenshot Generator
-        # Asumsikan script Anda berada di root directory atau dipanggil dengan benar
-        run: node ext/screenshot-puppeteer.js
+        run: node server-screenshot.js
 
       # 5. Siapkan Output
-      # File gambar yang dihasilkan perlu ditambahkan ke repositori
       - name: ➕ Add and Commit new images
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "feat(screenshot): Add/Update webp screenshots [skip ci]"
-          # Hanya commit perubahan pada folder img/
           file_pattern: 'img/*.webp'
-          # Commit ke branch saat ini
           branch: ${{ github.ref_name }}
-          # Mencegah trigger workflow lain yang mendengarkan 'push'
           commit_options: '--no-verify --signoff'
