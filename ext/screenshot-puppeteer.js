@@ -15,15 +15,15 @@ const INPUT_SLUG_FILE = path.join(ARTIKEL_DIR, "portal.txt");
 const BASE_DOMAIN = 'https://portalbalikpapan.com'; // Base Domain
 
 const EXT = "webp";
-const TARGET_WIDTH = 1200; 
-const DEFAULT_VIEWPORT_HEIGHT = 1080; 
+const TARGET_WIDTH = 1200;
+const DEFAULT_VIEWPORT_HEIGHT = 1080;
 
 // Konfigurasi pemblokiran resource
 const BLOCKED_RESOURCE_TYPES = [
-    'media', 'font', 'image', 'xhr', 'fetch', 'other'
+    'media', 'font', 'xhr', 'fetch', 'other'
 ];
 const BLOCKED_KEYWORDS = [
-    'ad.', 'advert', 'googlead', 'doubleclick', 
+    'ad.', 'advert', 'googlead', 'doubleclick',
     'analytics', 'track', 'tagmanager', 'facebook.com/tr', 'googlesyndication'
 ];
 
@@ -35,7 +35,7 @@ function readSlugsFromInputFile() {
         console.error(`[FATAL] File input tidak ditemukan: ${INPUT_SLUG_FILE}`);
         return [];
     }
-    
+
     // Baca konten, bagi berdasarkan baris baru, dan filter baris kosong
     const content = fs.readFileSync(INPUT_SLUG_FILE, 'utf8');
     return content.split('\n')
@@ -60,7 +60,7 @@ async function main() {
     // Launch browser sekali saja
     const browser = await puppeteer.launch({
       headless: "new",
-      defaultViewport: { width: TARGET_WIDTH, height: DEFAULT_VIEWPORT_HEIGHT }, 
+      defaultViewport: { width: TARGET_WIDTH, height: DEFAULT_VIEWPORT_HEIGHT },
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -70,14 +70,14 @@ async function main() {
     });
 
     const page = await browser.newPage();
-    
+
     // --- KONFIGURASI BLOKIR RESOURCE ---
     await page.setRequestInterception(true);
 
     page.on('request', (request) => {
         const url = request.url().toLowerCase();
         const resourceType = request.resourceType();
-        
+
         let shouldBlock = false;
 
         // A. Blokir berdasarkan Tipe Resource umum
@@ -86,7 +86,7 @@ async function main() {
                 shouldBlock = true;
             }
         }
-        
+
         // B. Blokir berdasarkan Kata Kunci
         if (!shouldBlock && BLOCKED_KEYWORDS.some(keyword => url.includes(keyword))) {
             shouldBlock = true;
@@ -113,11 +113,11 @@ async function main() {
         } else {
             url = `${BASE_DOMAIN}${slug}`; // Gabungkan BASE_DOMAIN jika hanya path
         }
-        
+
         // 2. Tentukan Nama File Output
         // Bersihkan path untuk penamaan file: hapus slash (/) di awal dan akhir
-        const cleanSlug = slugForFileName.replace(/^\/|\/$/g, ''); 
-        
+        const cleanSlug = slugForFileName.replace(/^\/|\/$/g, '');
+
         // Ganti semua slash di path yang tersisa (misal /berita/xyz) dengan dash (-) untuk nama file
         const fileName = cleanSlug.replace(/\//g, '-');
         const output = path.join(IMG_DIR, `${fileName}.${EXT}`);
@@ -132,7 +132,7 @@ async function main() {
       try {
         const response = await page.goto(url, {
           waitUntil: ["load", "networkidle2"],
-          timeout: 60000, 
+          timeout: 60000,
         });
 
         if (!response || response.status() !== 200) {
@@ -144,7 +144,7 @@ async function main() {
           path: output,
           type: EXT,
           quality: EXT === "webp" ? 90 : 90,
-          fullPage: true, 
+          fullPage: true,
         });
 
         console.log(`[📸] Screenshot full page disimpan: ${output}`);
@@ -152,7 +152,7 @@ async function main() {
         console.error(`[⚠️] Gagal screenshot ${url}: ${err.message}`);
       }
 
-      await new Promise(r => setTimeout(r, 1000)); 
+      await new Promise(r => setTimeout(r, 1000));
     }
 
     await browser.close();
@@ -160,7 +160,7 @@ async function main() {
 
   } catch (err) {
     console.error(`[FATAL] ${err.message}`);
-  } 
+  }
 }
 
 main();
