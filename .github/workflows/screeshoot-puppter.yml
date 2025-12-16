@@ -1,10 +1,13 @@
 name: 📸 Generate Screenshots (External Domain)
 
 # 📢 Pemicu Workflow
+# Menggantikan schedule/dispatch dengan trigger yang Anda inginkan (misalnya, push ke main)
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-  schedule:
-    - cron: '0 2 * * *' 
+  # Anda bisa menambahkan schedule: jika diperlukan
   
 concurrency: 
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,40 +16,102 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
+    
+    # 🚨 PENTING: Berikan izin 'write' agar 'git push' berhasil (Solusi Error 403)
+    permissions:
+      contents: write
 
     env:
       NODE_VERSION: 20.x
 
     steps:
-      - name: ⚙️ Checkout Kode
+      - name: ⚙️ 1. Checkout Kode
         uses: actions/checkout@v4
 
-      # 1. Setup Node.js
-      - name: 🛠️ Setup Node.js
+      - name: 🛠️ 2. Setup Node.js dan Install Dependencies
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      # 2. Instal Ketergantungan NPM (Termasuk Puppeteer)
-      - name: 📦 Install NPM dependencies
+      - name: 📦 3. Install NPM dependencies
         run: npm install
 
-      # 3. PASTIKAN INSTALASI CHROMIUM PUPPETEER (Solusi Cepat)
-      # Menggantikan apt-get yang lambat. Perintah ini memaksa Puppeteer mengunduh 
-      # versi Chromium yang kompatibel jika belum ada.
-      - name: 🌐 Ensure Puppeteer Chromium is installed
+      - name: 🌐 4. Ensure Puppeteer Chromium is installed
+        # Menggantikan apt-get yang lambat dengan perintah yang disarankan Puppeteer
         run: npx puppeteer install
 
-      # 4. Jalankan Script Screenshot
-      - name: 📸 Run Screenshot Generator
-        run: node ext/screenshot-puppeteer.js
+      # Jika ada langkah 5 (misal: generate html/json), letakkan di sini.
 
-      # 5. Siapkan Output
-      - name: ➕ Add and Commit new images
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "feat(screenshot): Add/Update webp screenshots [skip ci]"
-          file_pattern: 'img/*.webp'
-          branch: ${{ github.ref_name }}
-          commit_options: '--no-verify --signoff'
+      - name: '6. Generate screenshots'
+        run: |
+          echo "📸 Generating screenshots (installing puppeteer)..."
+          # Karena npm install sudah dilakukan di langkah 3, ini hanya menjalankan skrip
+          echo "Running screenshot script..."
+          # Pastikan path ke skrip sesuai dengan yang Anda inginkan
+          node ext/screenshot-puppeteer.js 
+        env:
+          # Pastikan file Anda ada di sini, jika perlu token untuk domain luar
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+
+      - name: '7. Commit and Push All Generated Files'
+        run: |
+          # 🚨 Pastikan folder img/ dan artikel/ sudah ada di root folder.
+          
+          # Konfigurasi Git User
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Stage semua file yang mungkin berubah atau baru dibuat
+          # Termasuk img/ (webp), artikel/ (txt/html jika di-generate), dll.
+          git add img/ artikel/
+          
+          # Cek apakah ada perubahan yang di-stage
+          if git diff --staged --quiet; then
+            echo "✅ Tidak ada perubahan file yang di-generate, tidak perlu commit."
+            
+            # Logika yang Anda inginkan untuk 'push' trigger
+            if [[ "${{ github.event_name }}" != "push" ]]; then
+              exit 0 
+            else
+              echo "Workflow dipicu oleh push, melanjutkan meskipun tidak ada file generated baru."
+            fi
+            
+          else
+            # Hanya commit jika ada perubahan yang di-stage
+            echo "⏳ Perubahan ditemukan. Melakukan commit..."
+            git commit -m "build: 🚀 img, html, txt & json udah beres. [skip ci]" # Menambahkan [skip ci] untuk mencegah loop
+
+            echo "🔃 Melakukan sinkronisasi sebelum push..."
+            # Pull --rebase lebih aman untuk CI
+            # Gunakan --allow-unrelated-histories jika Anda yakin
+            git pull --rebase origin main || { echo "⚠️ Gagal pull --rebase, mencoba pull biasa"; git pull origin main; }
+            
+            echo "🚀 Mendorong perubahan ke server..."
+            git push origin main
+          fi
+        env:
+          # Token GITHUB_TOKEN diperlukan oleh git push
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          
+      - name: '8. Show Published Links & Summary'
+        if: always() 
+        run: |
+          echo "--- Summary ---"
+          echo "✅ File yang seharusnya di-generate:"
+          echo "🔗 artikel.json: https://dalam.web.id/artikel.json"
+          echo "🔗 sitemap.xml : https://dalam.web.id/sitemap.xml"
+          echo "🔗 rss.xml     : https://dalam.web.id/rss.xml"
+          echo "🔗 sitemap.txt : https://dalam.web.id/sitemap.txt"
+          
+          echo "📊 Jumlah konten saat ini:"
+          # Menggunakan bash globbing dengan safe exit jika file tidak ada
+          COUNTHTML=$(ls -f artikel/*.html 2>/dev/null | wc -l || echo 0)
+          echo "➡️  $COUNTHTML artikel (*.html) di folder artikel/"
+          COUNTWEBP=$(ls -f img/*.webp 2>/dev/null | wc -l || echo 0)
+          echo "➡️  $COUNTWEBP cover (*.webp) di folder img/"
+          
+          echo "Triggered by: ${{ github.event_name }}"
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            echo "Workflow run conclusion: ${{ github.event.workflow_run.conclusion }}"
+          fi
