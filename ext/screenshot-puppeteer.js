@@ -16,7 +16,7 @@ const BASE_DOMAIN = 'https://portalbalikpapan.com';
 
 const EXT = "webp";
 const TARGET_WIDTH = 1200;
-const DEFAULT_VIEWPORT_HEIGHT = 1080;
+const DEFAULT_VIEWPORT_HEIGHT = 3080;
 const HEIGHT_TO_CROP_FROM_BOTTOM = 1124;
 
 // Konfigurasi pemblokiran resource
