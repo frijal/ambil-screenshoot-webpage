@@ -40,7 +40,7 @@ jobs:
 
       # 4. Jalankan Script Screenshot
       - name: 📸 Run Screenshot Generator
-        run: node server-screenshot.js
+        run: node ext/screenshot-puppeteer.js
 
       # 5. Siapkan Output
       - name: ➕ Add and Commit new images
