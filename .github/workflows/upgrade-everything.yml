@@ -1,0 +1,112 @@
+name: 🛠️ Pemeliharaan Dependensi (Ultra-Optimal v5 Compact)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 1 9 * *' # setiap tanggal 9 pukul 01:00 UTC (08:00 WIB)
+
+jobs:
+  maintenance-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: 🧩 Checkout kode
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 💾 Cache NPM
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: npm-
+
+      - name: 📦 Install & Upgrade Dependencies
+        run: |
+          npm ci || npm install
+          npm install -g npm-check-updates
+          ncu -u --target minor
+          echo "✅ Dependencies diupgrade."
+
+      - name: 🌈 Update Assets Highlight.js & Font Awesome
+        run: |
+          mkdir -p ext mini
+          npm install @highlightjs/cdn-assets@latest @fortawesome/fontawesome-free@latest --no-save
+
+          # Highlight.js JS & CSS (CSS selalu dari CDN versi terbaru)
+          cp node_modules/@highlightjs/cdn-assets/highlight.min.js ext/highlight.js
+          HLJS_LATEST=$(npm view @highlightjs/cdn-assets version)
+          curl -s -o ext/default.min.css https://cdnjs.cloudflare.com/ajax/libs/highlight.js/$HLJS_LATEST/styles/default.min.css
+
+          # Font Awesome
+          mkdir -p ext/fontawesome-webfonts
+          cp -f node_modules/@fortawesome/fontawesome-free/webfonts/* ext/fontawesome-webfonts/
+          cp node_modules/@fortawesome/fontawesome-free/css/all.min.css ext/fontawesome.css
+          sed -i 's|\.\./webfonts/|./fontawesome-webfonts/|g' ext/fontawesome.css
+
+          DATE_NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo -e "hljs=$HLJS_LATEST\nfontawesome=$(npm view @fortawesome/fontawesome-free version)\nupdated=$DATE_NOW" > mini/asset-info.txt
+
+      - name: 🔍 Verifikasi Font Awesome
+        run: |
+          mkdir -p mini
+          FONT_DIR="ext/fontawesome-webfonts"
+          OUTPUT="mini/fontawesome-verify.txt"
+          PREV="mini/fontawesome-verify-prev.txt"
+          ALERT="mini/fontawesome-alert.txt"
+          [ -f "$OUTPUT" ] && cp "$OUTPUT" "$PREV"
+          echo "📄 Font + ukuran + hash SHA-256:" > "$OUTPUT"
+          find "$FONT_DIR" -type f \( -name "*.woff" -o -name "*.woff2" -o -name "*.ttf" \) | sort | while read f; do
+            echo "$(basename "$f")|$(stat -c%s "$f")|$(sha256sum "$f" | awk '{print $1}')" >> "$OUTPUT"
+          done
+          if [ -f "$PREV" ]; then
+            diff=$(diff -u "$PREV" "$OUTPUT" || true)
+            [ -n "$diff" ] && echo -e "🚨 Perubahan font:\n$diff" > "$ALERT" && echo "alert=true" >> $GITHUB_OUTPUT || echo "alert=false" >> $GITHUB_OUTPUT
+          else
+            echo "alert=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🧪 Audit, Lint & Test
+        run: |
+          npm audit --omit=dev || true
+          npm run lint --if-present || true
+          npm run test --if-present || true
+
+      - name: 🔍 Cek perubahan akhir & PR
+        id: check_changes
+        run: |
+          [[ $(git status --porcelain package.json package-lock.json ext mini) ]] && echo "changes_detected=true" >> $GITHUB_OUTPUT || echo "changes_detected=false" >> $GITHUB_OUTPUT
+
+      - name: 📨 Buat Pull Request
+        if: steps.check_changes.outputs.changes_detected == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/auto-maintenance-${{ github.run_id }}
+          title: 'chore: Auto Maintenance (Deps + Assets + Font Integrity)'
+          commit-message: 'chore: upgrade deps, sync Highlight.js & Font Awesome, verify font hash'
+          body: |
+            🔧 **Pemeliharaan Otomatis Compact**
+
+            Perubahan:
+            - Upgrade Dependencies
+            - Highlight.js JS & CSS (CSS selalu versi terbaru)
+            - Font Awesome + verifikasi SHA-256 font
+            - Audit & Lint
+
+            ${{ steps.check_changes.outputs.changes_detected == 'true' && '🚨 Perubahan terdeteksi pada font/asset!' || '✅ Semua asset aman.' }}
+
+          labels: dependencies, chore, automated
+          reviewers: frijal
+          draft: false
+
+      - name: ℹ️ Tidak ada perubahan
+        if: steps.check_changes.outputs.changes_detected == 'false'
+        run: echo "💤 Tidak ada perubahan signifikan."
