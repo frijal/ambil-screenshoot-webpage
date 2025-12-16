@@ -1,6 +1,6 @@
 // =========================================================
-// SCRIPT: server-screenshot.js (DOMAIN EKSTERNAL - CLEAN URL)
-// FITUR: Ambil Screenshot dari Domain Eksternal TANPA ekstensi .html
+// SCRIPT: server-screenshot.js (DOMAIN EKSTERNAL DARI portal.txt)
+// FITUR: Ambil Screenshot dari Domain Eksternal, Input URL dari file portal.txt
 // =========================================================
 
 import fs from "fs";
@@ -11,12 +11,10 @@ const ROOT_DIR = process.cwd();
 const ARTIKEL_DIR = path.join(ROOT_DIR, "artikel");
 const IMG_DIR = path.join(ROOT_DIR, "img");
 
+const INPUT_SLUG_FILE = path.join(ARTIKEL_DIR, "portal.txt"); // <-- File Input Baru
+const BASE_DOMAIN = 'https://portalbalikpapan.com'; // <-- Base Domain Baru (Root)
+
 const EXT = "webp";
-
-// GANTI BASE_URL ke domain target eksternal Anda
-// Pastikan BASE_URL diakhiri dengan slash (/) jika diperlukan sebelum slug.
-const BASE_URL = 'https://portalbalikpapan.com/'; 
-
 const TARGET_WIDTH = 1200; 
 
 // Konfigurasi pemblokiran resource
@@ -28,23 +26,41 @@ const BLOCKED_KEYWORDS = [
     'analytics', 'track', 'tagmanager', 'facebook.com/tr', 'googlesyndication'
 ];
 
+/**
+ * Membaca file portal.txt dan mengembalikan daftar slug/path.
+ * Contoh: /pejabat-terjerat/
+ * @returns {string[]} Array of slugs.
+ */
+function readSlugsFromInputFile() {
+    if (!fs.existsSync(INPUT_SLUG_FILE)) {
+        console.error(`[FATAL] File input tidak ditemukan: ${INPUT_SLUG_FILE}`);
+        return [];
+    }
+    
+    // Baca konten, bagi berdasarkan baris baru, dan filter baris kosong
+    const content = fs.readFileSync(INPUT_SLUG_FILE, 'utf8');
+    return content.split('\n')
+                  .map(line => line.trim())
+                  .filter(line => line.length > 0);
+}
+
+
 async function main() {
   try {
-    if (!fs.existsSync(ARTIKEL_DIR)) {
-      console.error("[FATAL] Folder 'artikel/' tidak ditemukan.");
-      process.exit(1);
+    const slugs = readSlugsFromInputFile();
+
+    if (slugs.length === 0) {
+      console.log("🧭 Tidak ada slug ditemukan di portal.txt. Proses dihentikan.");
+      return;
     }
 
     fs.mkdirSync(IMG_DIR, { recursive: true });
 
-    // Membaca daftar slug artikel dari folder lokal
-    const files = fs.readdirSync(ARTIKEL_DIR).filter(f => f.endsWith(".html"));
-    console.log(`🧭 Menemukan ${files.length} slug artikel lokal untuk domain eksternal...`);
+    console.log(`🧭 Menemukan ${slugs.length} URL untuk di-screenshot dari ${INPUT_SLUG_FILE}...`);
 
     // Launch browser sekali saja
     const browser = await puppeteer.launch({
       headless: "new",
-      // HANYA set lebar. Tinggi akan otomatis karena opsi fullPage: true.
       defaultViewport: { width: TARGET_WIDTH }, 
       args: [
         "--no-sandbox",
@@ -65,14 +81,12 @@ async function main() {
         
         let shouldBlock = false;
 
-        // A. Blokir berdasarkan Tipe Resource umum
         if (BLOCKED_RESOURCE_TYPES.includes(resourceType)) {
             if (resourceType !== 'document' && resourceType !== 'stylesheet' && resourceType !== 'script') {
                  shouldBlock = true;
             }
         }
         
-        // B. Blokir berdasarkan Kata Kunci (Targeting Ads/Trackers)
         if (!shouldBlock && BLOCKED_KEYWORDS.some(keyword => url.includes(keyword))) {
             shouldBlock = true;
         }
@@ -85,18 +99,24 @@ async function main() {
     });
     // --- END: KONFIGURASI BLOKIR RESOURCE ---
 
-    for (const file of files) {
-        // base = nama file tanpa ekstensi (.html) -> ini adalah SLUG yang bersih
-      const base = path.basename(file, ".html");
-      const output = path.join(IMG_DIR, `${base}.${EXT}`);
+    for (const slug of slugs) {
+        // Bersihkan slug: hapus slash (/) di awal dan akhir untuk penamaan file
+        const cleanSlug = slug.replace(/^\/|\/$/g, ''); 
+        
+        // Nama file output: ganti slash di path dengan dash (-) atau gunakan slug bersih
+        // Contoh: /pejabat-terjerat/ -> pejabat-terjerat.webp
+        // Jika slug tidak memiliki slash di tengah, penamaannya sudah benar.
+        const fileName = cleanSlug.replace(/\//g, '-');
+        const output = path.join(IMG_DIR, `${fileName}.${EXT}`);
 
       if (fs.existsSync(output)) {
         console.log(`[⏭️] Lewati ${output} (sudah ada)`);
         continue;
       }
 
-      // 🚨 PERUBAHAN UTAMA: Membangun URL eksternal TANPA penambahan .html
-      const url = `${BASE_URL}${base}`; // Dihapus '.html' di sini
+      // Membangun URL: BASE_DOMAIN + slug
+      // Contoh: https://portalbalikpapan.com + /pejabat-terjerat/
+      const url = `${BASE_DOMAIN}${slug}`; 
       console.log(`[🔍] Rendering ${url}`);
 
       try {
