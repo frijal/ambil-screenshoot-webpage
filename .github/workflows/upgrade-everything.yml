@@ -3,7 +3,7 @@ name: 🛠️ Pemeliharaan Dependensi (Ultra-Optimal v5 Compact)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 1 9 * *' # setiap tanggal 9 pukul 01:00 UTC (08:00 WIB)
+    - cron: '0 1 19 * *' # setiap tanggal 9 pukul 01:00 UTC (08:00 WIB)
 
 jobs:
   maintenance-pr:
