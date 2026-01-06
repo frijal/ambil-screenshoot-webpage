@@ -3,7 +3,7 @@ name: 🛠️ Pemeliharaan Dependensi (Ultra-Optimal v5 Compact)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 1 19 * *' # setiap tanggal 9 pukul 01:00 UTC (08:00 WIB)
+    - cron: '0 1 9 * *' # setiap tanggal 9 pukul 01:00 UTC (08:00 WIB)
 
 jobs:
   maintenance-pr:
@@ -14,20 +14,20 @@ jobs:
 
     steps:
       - name: 🧩 Checkout kode
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.1
 
-      - name: ⚙️ Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: 💾 Cache NPM
-        uses: actions/cache@v4
+      - name: Cache Node Modules
+        uses: actions/cache@v5.0.1
         with:
           path: ~/.npm
-          key: npm-${{ hashFiles('package-lock.json') }}
-          restore-keys: npm-
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v6.1.0
+        with:
+          node-version: 20
 
       - name: 📦 Install & Upgrade Dependencies
         run: |
@@ -38,7 +38,6 @@ jobs:
 
       - name: 🌈 Update Assets Highlight.js & Font Awesome
         run: |
-          mkdir -p ext mini
           npm install @highlightjs/cdn-assets@latest @fortawesome/fontawesome-free@latest --no-save
 
           # Highlight.js JS & CSS (CSS selalu dari CDN versi terbaru)
@@ -57,7 +56,6 @@ jobs:
 
       - name: 🔍 Verifikasi Font Awesome
         run: |
-          mkdir -p mini
           FONT_DIR="ext/fontawesome-webfonts"
           OUTPUT="mini/fontawesome-verify.txt"
           PREV="mini/fontawesome-verify-prev.txt"
@@ -87,7 +85,7 @@ jobs:
 
       - name: 📨 Buat Pull Request
         if: steps.check_changes.outputs.changes_detected == 'true'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: chore/auto-maintenance-${{ github.run_id }}
           title: 'chore: Auto Maintenance (Deps + Assets + Font Integrity)'
@@ -104,7 +102,7 @@ jobs:
             ${{ steps.check_changes.outputs.changes_detected == 'true' && '🚨 Perubahan terdeteksi pada font/asset!' || '✅ Semua asset aman.' }}
 
           labels: dependencies, chore, automated
-          reviewers: frijal
+          reviewers: frijall
           draft: false
 
       - name: ℹ️ Tidak ada perubahan
