@@ -3,9 +3,6 @@ name: 📸 Generate Screenshots (External Domain)
 # 📢 Pemicu Workflow
 # Menggantikan schedule/dispatch dengan trigger yang Anda inginkan (misalnya, push ke main)
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
   # Anda bisa menambahkan schedule: jika diperlukan
   
