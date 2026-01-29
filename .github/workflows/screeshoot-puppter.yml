@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: ⚙️ 1. Checkout Kode
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🛠️ 2. Setup Node.js dan Install Dependencies
         uses: actions/setup-node@v4
