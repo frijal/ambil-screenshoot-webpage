@@ -12,7 +12,7 @@ const ARTIKEL_DIR = path.join(ROOT_DIR, "artikel");
 const IMG_DIR = path.join(ROOT_DIR, "img");
 
 const INPUT_SLUG_FILE = path.join(ARTIKEL_DIR, "portal.txt");
-const BASE_DOMAIN = 'https://portalbalikpapan.com';
+const BASE_DOMAIN = 'https://dalam.web.id';
 
 const EXT = "webp";
 const TARGET_WIDTH = 1200;
