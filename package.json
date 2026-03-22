@@ -5,7 +5,7 @@
   "description": "Layar Kosong - Auto RSS Generator, Website Screenshot, dan AI-Powered Index Generator dengan Google Gemini",
   "scripts": {
     "start": "bun ext/rss.js",
-    "screenshot": "bun ext/screenshot-puppeteer.js",
+    "screenshot": "bun ext/screenshot-puppeteer.ts",
     "check-deps": "bun x depcheck"
   },
   "repository": {
