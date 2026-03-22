@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: ⚙️ 1. Checkout Kode
-        uses: actions/checkout@v4 # Versi stabil terbaru
+        uses: actions/checkout@v6 # Versi stabil terbaru
         with:
           fetch-depth: 0 # Penting untuk rebase yang aman
 
