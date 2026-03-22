@@ -38,8 +38,6 @@ jobs:
       - name: 📸 5. Generate Screenshots & RSS
         run: |
           echo "Running generation scripts..."
-          # Jalankan start (RSS) dan screenshot menggunakan Bun
-          bun run start
           bun run screenshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
