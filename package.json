@@ -4,9 +4,9 @@
   "type": "module",
   "description": "Layar Kosong - Auto RSS Generator, Website Screenshot, dan AI-Powered Index Generator dengan Google Gemini",
   "scripts": {
-    "start": "node ext/rss.js",
-    "screenshot": "node ext/screenshot-puppeteer.js",
-    "check-deps": "depcheck"
+    "start": "bun ext/rss.js",
+    "screenshot": "bun ext/screenshot-puppeteer.js",
+    "check-deps": "bun x depcheck"
   },
   "repository": {
     "type": "git",
@@ -26,14 +26,10 @@
   "author": "Fakhrul Rijal <frijal@dalam.web.id>",
   "license": "MIT",
   "homepage": "https://dalam.web.id",
-  "engines": {
-    "node": ">=20.0.0"
-  },
   "devDependencies": {
     "depcheck": "^1.4.7"
   },
   "dependencies": {
-    "@google/genai": "^1.44.0",
     "@google/generative-ai": "^0.24.1",
     "@xmldom/xmldom": "^0.9.8",
     "cheerio": "^1.2.0",
