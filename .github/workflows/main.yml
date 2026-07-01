@@ -13,7 +13,7 @@ on:
         options:
           - audit       # Hanya cek kesehatan dapur (Cepat)
           - upgrade     # Update paket + Sync Aset + Audit
-          - paket      # Add/Remove paket + Sync Aset + Audit
+          - paket       # Add/Remove paket + Sync Aset + Audit
       upgrade_type:
         description: 'Tipe upgrade (khusus upgrade)'
         required: false
@@ -129,17 +129,14 @@ jobs:
           # 6. Sesuaikan path fontawesome
           sed -i 's|\.\./webfonts/|./fontawesome-webfonts/|g' dapur/fontawesome.css
 
-          # 7. Eksekusi Koki (Transpile markdown.ts ke /ext/markdown.js)
-          bun dapur/koki.ts --once
-
-          # 8. Update Metadata
+          # 7. Update Metadata
           FA_VER=$(jq -r .version node_modules/@fortawesome/fontawesome-free/package.json)
           H2C_VER=$(jq -r .version node_modules/html2canvas/package.json)
           H2PDF_VER=$(jq -r .version node_modules/html2pdf.js/package.json)
           HLJS_VER=$(jq -r .version node_modules/@highlightjs/cdn-assets/package.json)
           MARKED_VER="${MARKED_VER:-$(curl -fsSL https://registry.npmjs.org/marked/latest | jq -r .version)}"
 
-          # 9. Simpan ke asset-info.txt
+          # 8. Simpan ke asset-info.txt
           echo -e "fontawesome=$FA_VER\nhtml2canvas=$H2C_VER\nhtml2pdf=$H2PDF_VER\nhljs=$HLJS_VER\nmarked=$MARKED_VER\nqrcode=1.0.0-davidshimjs" | sort > mini/asset-info.txt
 
       # --- STEP 3: AUDIT (Selalu Jalan untuk SEMUA mode) ---
@@ -155,7 +152,7 @@ jobs:
           [ -f "$OUTPUT" ] && cp "$OUTPUT" "$PREV" || touch "$PREV"
           printf "Font Integrity Report\nFilename | Size | SHA-256\n" > "$OUTPUT"
           find dapur/fontawesome-webfonts -type f -regex ".*\.\(woff\|woff2\|ttf\)" | sort | while read -r f; do
-              printf "%s | %s | %s\n" "$(basename "$f")" "$(stat -c%s "$f")" "$(sha256sum "$f" | awk '{print $1}')" >> "$OUTPUT"
+            printf "%s | %s | %s\n" "$(basename "$f")" "$(stat -c%s "$f")" "$(sha256sum "$f" | awk '{print $1}')" >> "$OUTPUT"
           done
           [ -s "$PREV" ] && ! diff -q "$PREV" "$OUTPUT" > /dev/null && echo "alert=true" >> $GITHUB_OUTPUT || echo "alert=false" >> $GITHUB_OUTPUT
 
